@@ -11,82 +11,84 @@ import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 public class App {
+
     static {
         try {
             LogManager.getLogManager().readConfiguration(
                 new FileInputStream("/Users/jay/Documents/w05sqlinjectionpub-Jaykallam/resources/logging.properties")
             );
         } catch (SecurityException | IOException e) {
-            System.err.println("Logging configuration failed.");
+            System.err.println("Couldn’t load logging config.");
         }
     }
 
     private static final Logger logger = Logger.getLogger(App.class.getName());
 
     public static void main(String[] args) {
-        SQLiteConnectionManager wordleDatabaseConnection = new SQLiteConnectionManager("words.db");
+        SQLiteConnectionManager db = new SQLiteConnectionManager("words.db");
 
-        wordleDatabaseConnection.createNewDatabase("/Users/jay/Documents/w05sqlinjectionpub-Jaykallam/sqlite/words.db");
-        if (!wordleDatabaseConnection.checkIfConnectionDefined()) {
-            System.out.println("Not able to connect. Sorry!");
+        db.createNewDatabase("/Users/jay/Documents/w05sqlinjectionpub-Jaykallam/sqlite/words.db");
+
+        if (!db.checkIfConnectionDefined()) {
+            System.out.println("Couldn't connect to the database.");
             return;
         }
 
-        if (!wordleDatabaseConnection.createWordleTables()) {
-            System.out.println("Not able to launch. Sorry!");
+        if (!db.createWordleTables()) {
+            System.out.println("Error setting up game tables.");
             return;
         }
 
-        // Load words from file into database with validation
-        try (BufferedReader br = new BufferedReader(new FileReader("/Users/jay/Documents/w05sqlinjectionpub-Jaykallam/resources/data.txt"))) {
-            String line;
-            int i = 1;
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
+        // Load and add valid words from the file
+        try (BufferedReader reader = new BufferedReader(new FileReader("/Users/jay/Documents/w05sqlinjectionpub-Jaykallam/resources/data.txt"))) {
+            String word;
+            int wordId = 1;
 
-                if (line.matches("^[a-z]{4}$")) {
-                    logger.info("Valid word added from file: " + line);
-                    wordleDatabaseConnection.addValidWord(i, line);
-                    i++;
+            while ((word = reader.readLine()) != null) {
+                word = word.trim();
+
+                if (word.matches("^[a-z]{4}$")) {
+                    logger.info("Added valid word: " + word);
+                    db.addValidWord(wordId, word);
+                    wordId++;
                 } else {
-                    logger.severe("Invalid word in data.txt: " + line);
+                    logger.severe("Bad word in data.txt: " + word);
                 }
             }
-        } catch (IOException e) {
-            logger.log(Level.SEVERE, "Error reading data.txt.", e);
-            System.out.println("Something went wrong while loading data. Please try again.");
+        } catch (IOException ex) {
+            logger.log(Level.SEVERE, "Failed to read from data file.", ex);
+            System.out.println("Something went wrong while loading words.");
             return;
         }
 
-        // Start the game loop
-        try (Scanner scanner = new Scanner(System.in)) {
-            String guess;
+        // Guessing loop
+        try (Scanner input = new Scanner(System.in)) {
             while (true) {
-                System.out.print("Enter a 4-letter word for a guess or 'q' to quit: ");
-                guess = scanner.nextLine();
+                System.out.print("Guess a 4-letter word (or 'q' to quit): ");
+                String guess = input.nextLine();
 
                 if (guess.equals("q")) {
-                    System.out.println("Thanks for playing!");
+                    System.out.println("Bye!");
                     break;
                 }
 
                 if (!guess.matches("^[a-z]{4}$")) {
-                    logger.warning("Invalid user guess: " + guess);
-                    System.out.println("Invalid input! Please enter exactly 4 lowercase letters (a-z only).\n");
+                    logger.warning("Invalid guess from user: " + guess);
+                    System.out.println("Try again with exactly 4 lowercase letters.");
                     continue;
                 }
 
-                System.out.println("You've guessed '" + guess + "'.");
+                System.out.println("You guessed: " + guess);
 
-                if (wordleDatabaseConnection.isValidWord(guess)) {
-                    System.out.println("Success! It is in the list.\n");
+                if (db.isValidWord(guess)) {
+                    System.out.println("Nice! That’s a valid word.\n");
                 } else {
-                    System.out.println("Sorry. This word is NOT in the list.\n");
+                    System.out.println("Nope, not in the word list.\n");
                 }
             }
-        } catch (NoSuchElementException | IllegalStateException e) {
-            logger.log(Level.WARNING, "Input error during game loop.", e);
-            System.out.println("An error occurred while processing your input.");
+        } catch (NoSuchElementException | IllegalStateException ex) {
+            logger.log(Level.WARNING, "Problem while reading user input.", ex);
+            System.out.println("Something went wrong while reading input.");
         }
     }
 }
