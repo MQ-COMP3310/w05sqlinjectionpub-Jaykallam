@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="workshop05code.AppTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-03-30T04:13:45" hostname="MacBookPro.home" time="0.076">
+  <properties/>
+  <testcase name="appHasAGreeting()" classname="workshop05code.AppTest" time="0.076"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
